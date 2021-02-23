@@ -3,6 +3,7 @@ import AgoraRTC, {
   IAgoraRTCClient,
   IAgoraRTCRemoteUser,
 } from 'agora-rtc-sdk-ng';
+import { AuthService } from './services/auth.service';
 const client: IAgoraRTCClient = AgoraRTC.createClient({
   mode: 'live',
   codec: 'vp8',
@@ -32,7 +33,7 @@ export class AppComponent implements OnInit {
       '00660c972e80bee423ea01a8ca67121691dIAAfkDNvRulrUwGtZXl3/jTgo32nfYprvI7kaJZOTRwcx5+b7G4AAAAAEABFd1n8jO8pYAEAAQCL7ylg',
   };
 
-  constructor() {}
+  constructor(public authService: AuthService) {}
 
   ngOnInit(): void {
     this.startBasicCall();
