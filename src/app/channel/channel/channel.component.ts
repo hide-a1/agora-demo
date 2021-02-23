@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Observable } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
+import { map, switchMap, take, tap } from 'rxjs/operators';
 import { User } from 'src/app/interfaces/user';
 import { AuthService } from 'src/app/services/auth.service';
 import { MeetingService } from 'src/app/services/meeting.service';
@@ -29,14 +29,26 @@ export class ChannelComponent implements OnInit {
   constructor(
     private authService: AuthService,
     private route: ActivatedRoute,
-    private meetingService: MeetingService
+    private meetingService: MeetingService,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
-    console.log('channel');
-    this.channelId$.subscribe((id) => {
-      this.channelId = id;
-    });
+    this.route.paramMap
+      .pipe(
+        take(1),
+        map((param) => param.get('channelId')),
+        tap((id) => {
+          this.channelId = id;
+        })
+      )
+      .toPromise()
+      .then((id) => {
+        console.log(this.authService.uid);
+        setTimeout(() => {
+          this.meetingService.joinAgoraChannel(this.authService.uid, id);
+        }, 800);
+      });
     console.log(this.channelId);
   }
 
@@ -48,5 +60,24 @@ export class ChannelComponent implements OnInit {
 
   async leaveChannel(uid: string): Promise<void> {
     this.meetingService.leaveChannel(uid, this.channelId);
+    this.router.navigateByUrl('/');
+  }
+
+  async publishAudio(): Promise<void> {
+    this.meetingService.publishMicrophone();
+    this.players = true;
+  }
+
+  async unPublishAudio(): Promise<void> {
+    this.meetingService.unpublishMicrophone();
+  }
+
+  async publishVideo(): Promise<void> {
+    this.meetingService.publishVideo();
+    this.players = true;
+  }
+
+  async unPublishVideo(): Promise<void> {
+    this.meetingService.unpublishVideo();
   }
 }

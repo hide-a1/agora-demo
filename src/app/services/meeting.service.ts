@@ -12,7 +12,6 @@ import { AngularFirestore } from '@angular/fire/firestore';
   providedIn: 'root',
 })
 export class MeetingService {
-  client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
   localPlayer = document.getElementById('local-player');
   agoraAppId: string = environment.agora.appId;
   agoraUid: any;
@@ -42,21 +41,107 @@ export class MeetingService {
       remDiv.parentNode.removeChild(remDiv);
     }
   }
-  async getAgoraUid(uid: string, channelName: string): Promise<any> {
+  // async getAgoraUid(uid: string, channelName: string): Promise<any> {
+  //   const client = this.getClient();
+  //   const token: any = await this.getToken(channelName);
+  //   console.log(token);
+  //   return ([
+  //     this.agoraUid,
+  //     this.localTracks.audioTrack,
+  //     this.localTracks.videoTrack,
+  //   ] = await Promise.all([
+  //     client.join(this.agoraAppId, channelName, token.token, uid),
+  //     AgoraRTC.createMicrophoneAudioTrack(),
+  //     AgoraRTC.createCameraVideoTrack(),
+  //     // AgoraRTC.createScreenVideoTrack()
+  //   ]));
+  // }
+
+  async joinAgoraChannel(uid: string, channelName: string) {
+    console.log(channelName);
+    const client = this.getClient();
+    const callable = this.fnc.httpsCallable('participateChannel');
+    await callable({ channelName })
+      .toPromise()
+      .catch((error) => {
+        console.log(channelName);
+        console.log(error);
+        this.router.navigate(['/']);
+      });
+    if (!uid) {
+      throw new Error('channel name is required.');
+    }
     const token: any = await this.getToken(channelName);
-    console.log(token);
-    return ([
-      this.agoraUid,
-      this.localTracks.audioTrack,
-      this.localTracks.videoTrack,
-    ] = await Promise.all([
-      this.client.join(this.agoraAppId, channelName, token.token, uid),
-      AgoraRTC.createMicrophoneAudioTrack(),
-      AgoraRTC.createCameraVideoTrack(),
-      // AgoraRTC.createScreenVideoTrack()
-    ]));
+
+    await client.join(this.agoraAppId, channelName, token.token, uid);
   }
+
+  async leaveAgoraChannel(): Promise<void> {
+    const client = this.getClient();
+    await this.unpublishAgora();
+    await client.leave();
+  }
+
+  async publishMicrophone(): Promise<void> {
+    const client = this.getClient();
+
+    this.localTracks.audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+    await client.publish([this.localTracks.audioTrack]);
+  }
+
+  async unpublishMicrophone(): Promise<void> {
+    const client = this.getClient();
+
+    if (this.localTracks.audioTrack) {
+      this.localTracks.audioTrack.close();
+      client.unpublish(this.localTracks.audioTrack);
+    }
+  }
+
+  async publishVideo(): Promise<void> {
+    const client = this.getClient();
+
+    this.localTracks.videoTrack = await AgoraRTC.createCameraVideoTrack();
+    this.snackBar.open('カメラをオンにしました');
+    this.localTracks.videoTrack.play('local-player');
+
+    client.on('user-published', async (user, mediaType) => {
+      console.log(mediaType);
+      // Subscribe to a remote user.
+      await client.subscribe(user, mediaType);
+      const remoteUserId = user.uid;
+      if (mediaType === 'video') {
+        const playerElement = document.createElement('div');
+
+        document.getElementById('remote-player-list').append(playerElement);
+        playerElement.outerHTML = `
+          <div id="player-wrapper-${remoteUserId}">
+            <p class="player-name">remoteUser(${remoteUserId})</p>
+            <div id="player-${remoteUserId}" class="player"></div>
+          </div>
+        `;
+
+        const remoteTrack = user.videoTrack;
+        remoteTrack.play('local-player');
+      }
+      if (mediaType === 'audio') {
+        user.audioTrack.play();
+      }
+    });
+    await client.publish([this.localTracks.videoTrack]);
+  }
+
+  async unpublishVideo(): Promise<void> {
+    const client = this.getClient();
+
+    if (this.localTracks.videoTrack) {
+      this.localTracks.videoTrack.close();
+      client.unpublish();
+    }
+  }
+
   async joinChannel(uid: string, channelName: string): Promise<any> {
+    const client = this.getClient();
     const callable = this.fnc.httpsCallable('participateChannel');
     await callable({ channelName })
       .toPromise()
@@ -75,46 +160,38 @@ export class MeetingService {
       this.localTracks.audioTrack,
       this.localTracks.videoTrack,
     ] = await Promise.all([
-      this.client.join(this.agoraAppId, channelName, token.token, uid),
+      client.join(this.agoraAppId, channelName, token.token, uid),
       AgoraRTC.createMicrophoneAudioTrack(),
       AgoraRTC.createCameraVideoTrack(),
       // AgoraRTC.createScreenVideoTrack()
     ]);
     this.snackBar.open('ルームにジョインしました');
     this.localTracks.videoTrack.play('local-player');
-    this.client.on('user-published', async (user, mediaType) => {
+    client.on('user-published', async (user, mediaType) => {
+      console.log(mediaType);
       // Subscribe to a remote user.
-      await this.client.subscribe(user, mediaType);
-      console.log('subscribe success');
-      const remoreUserId = user.uid;
-      console.log(remoreUserId);
-      console.log(user);
-      await this.client.subscribe(user, mediaType);
-      console.log('subscribe success');
+      await client.subscribe(user, mediaType);
+      const remoteUserId = user.uid;
       if (mediaType === 'video') {
-        console.log(mediaType);
         const playerElement = document.createElement('div');
-        console.log(playerElement);
+
         document.getElementById('remote-player-list').append(playerElement);
         playerElement.outerHTML = `
-          <div id="player-wrapper-${remoreUserId}">
-            <p class="player-name">remoteUser(${remoreUserId})</p>
-            <div id="player-${remoreUserId}" class="player"></div>
+          <div id="player-wrapper-${remoteUserId}">
+            <p class="player-name">remoteUser(${remoteUserId})</p>
+            <div id="player-${remoteUserId}" class="player"></div>
           </div>
         `;
-        console.log(playerElement.outerHTML);
+
         const remoteTrack = user.videoTrack;
         remoteTrack.play('local-player');
       }
       if (mediaType === 'audio') {
-        console.log(user);
-        console.log(mediaType);
         user.audioTrack.play();
       }
     });
     // this.client.on('user-unpublished', this.handleUserUnpublished);
-    await this.client.publish(Object.values(this.localTracks));
-    console.log('publish success');
+    await client.publish(Object.values(this.localTracks));
     return this.agoraUid;
   }
 
@@ -132,15 +209,15 @@ export class MeetingService {
     }
   }
 
-  async handleUserPublished(user, mediaType): Promise<void> {
-    const id = user.uid;
-    console.log(id);
-    this.remoteUsers[id] = user;
-    console.log(this.remoteUsers[id]);
-    console.log(user);
-    console.log(mediaType);
-    await this.subscribeChannel(user, mediaType);
-  }
+  // async handleUserPublished(user, mediaType): Promise<void> {
+  //   const id = user.uid;
+  //   console.log(id);
+  //   this.remoteUsers[id] = user;
+  //   console.log(this.remoteUsers[id]);
+  //   console.log(user);
+  //   console.log(mediaType);
+  //   await this.subscribeChannel(user, mediaType);
+  // }
 
   handleUserUnpublished(user): void {
     const id = user.uid;
@@ -151,32 +228,33 @@ export class MeetingService {
     }
   }
 
-  async subscribeChannel(user, mediaType): Promise<void> {
-    const uid = user.uid;
-    console.log(uid);
-    console.log(user);
-    await this.client.subscribe(user, mediaType);
-    console.log('subscribe success');
-    if (mediaType === 'video') {
-      console.log(mediaType);
-      const playerElement = document.createElement('div');
-      console.log(playerElement);
-      document.getElementById('remote-player-list').append(playerElement);
-      playerElement.outerHTML = `
-        <div id="player-wrapper-${uid}">
-          <p class="player-name">remoteUser(${uid})</p>
-          <div id="player-${uid}" class="player"></div>
-        </div>
-      `;
-      console.log(playerElement.outerHTML);
-      user.localTracks.videoTrack.play();
-    }
-    if (mediaType === 'audio') {
-      console.log(user);
-      console.log(mediaType);
-      user.audioTrack.play();
-    }
-  }
+  // async subscribeChannel(user, mediaType): Promise<void> {
+  //   const client = this.getClient();
+  //   const uid = user.uid;
+  //   console.log(uid);
+  //   console.log(user);
+  //   await client.subscribe(user, mediaType);
+  //   console.log('subscribe success');
+  //   if (mediaType === 'video') {
+  //     console.log(mediaType);
+  //     const playerElement = document.createElement('div');
+  //     console.log(playerElement);
+  //     document.getElementById('remote-player-list').append(playerElement);
+  //     playerElement.outerHTML = `
+  //       <div id="player-wrapper-${uid}">
+  //         <p class="player-name">remoteUser(${uid})</p>
+  //         <div id="player-${uid}" class="player"></div>
+  //       </div>
+  //     `;
+  //     console.log(playerElement.outerHTML);
+  //     user.localTracks.videoTrack.play();
+  //   }
+  //   if (mediaType === 'audio') {
+  //     console.log(user);
+  //     console.log(mediaType);
+  //     user.audioTrack.play();
+  //   }
+  // }
 
   async unpublishAgora(): Promise<void> {
     const client = this.getClient();
@@ -187,7 +265,7 @@ export class MeetingService {
   }
 
   async leaveChannel(uid: string, channelName: string): Promise<void> {
-    const thisClient = this.getClient();
+    const client = this.getClient();
     if (!uid || !channelName) {
       console.log('uid and channelName is requird');
       return null;
@@ -200,8 +278,8 @@ export class MeetingService {
       await Promise.all([
         this.localTracks.videoTrack.close(),
         this.localTracks.audioTrack.close(),
-        thisClient.unpublish(Object.values(this.localTracks)),
-        this.client.leave(),
+        client.unpublish(Object.values(this.localTracks)),
+        client.leave(),
         this.leaveFromSession(channelName),
       ]);
     }
