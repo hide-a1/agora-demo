@@ -73,6 +73,30 @@ export class MeetingService {
     }
     const token: any = await this.getToken(channelName);
 
+    client.on('user-published', async (user, mediaType) => {
+      console.log(mediaType);
+      // Subscribe to a remote user.
+      await client.subscribe(user, mediaType);
+      const remoteUserId = user.uid;
+      if (mediaType === 'video') {
+        const playerElement = document.createElement('div');
+
+        document.getElementById('remote-player-list').append(playerElement);
+        playerElement.outerHTML = `
+          <div id="player-wrapper-${remoteUserId}">
+            <p class="player-name">remoteUser(${remoteUserId})</p>
+            <div id="player-${remoteUserId}" class="player"></div>
+          </div>
+        `;
+
+        const remoteTrack = user.videoTrack;
+        remoteTrack.play('local-player');
+      }
+      if (mediaType === 'audio') {
+        user.audioTrack.play();
+      }
+    });
+
     await client.join(this.agoraAppId, channelName, token.token, uid);
   }
 
@@ -105,29 +129,6 @@ export class MeetingService {
     this.snackBar.open('カメラをオンにしました');
     this.localTracks.videoTrack.play('local-player');
 
-    client.on('user-published', async (user, mediaType) => {
-      console.log(mediaType);
-      // Subscribe to a remote user.
-      await client.subscribe(user, mediaType);
-      const remoteUserId = user.uid;
-      if (mediaType === 'video') {
-        const playerElement = document.createElement('div');
-
-        document.getElementById('remote-player-list').append(playerElement);
-        playerElement.outerHTML = `
-          <div id="player-wrapper-${remoteUserId}">
-            <p class="player-name">remoteUser(${remoteUserId})</p>
-            <div id="player-${remoteUserId}" class="player"></div>
-          </div>
-        `;
-
-        const remoteTrack = user.videoTrack;
-        remoteTrack.play('local-player');
-      }
-      if (mediaType === 'audio') {
-        user.audioTrack.play();
-      }
-    });
     await client.publish([this.localTracks.videoTrack]);
   }
 

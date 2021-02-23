@@ -47,9 +47,10 @@ export class ChannelComponent implements OnInit {
         console.log(this.authService.uid);
         setTimeout(() => {
           this.meetingService.joinAgoraChannel(this.authService.uid, id);
-        }, 800);
+        }, 1000);
       });
     console.log(this.channelId);
+    this.players = true;
   }
 
   async joinChannel(uid: string): Promise<void> {
