@@ -1,5 +1,14 @@
 {
   "projects": {
     "default": "agora-demo-e9ec7"
+  },
+  "targets": {
+    "agora-demo-e9ec7": {
+      "hosting": {
+        "agora-demo": [
+          "agora-demo-e9ec7"
+        ]
+      }
+    }
   }
 }
