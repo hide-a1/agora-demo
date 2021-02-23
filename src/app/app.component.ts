@@ -86,8 +86,4 @@ export class AppComponent implements OnInit {
     user: IAgoraRTCRemoteUser,
     mediaType: 'audio' | 'video'
   ) {}
-
-  check() {
-    console.log(this.rtc.client.connectionState);
-  }
 }

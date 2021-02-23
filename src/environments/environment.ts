@@ -5,14 +5,17 @@
 export const environment = {
   production: false,
   firebase: {
-    apiKey: "AIzaSyDZluG3ZTVBx1xTH-tEF18EScnfwiOQ98E",
-    authDomain: "agora-demo-e9ec7.firebaseapp.com",
-    projectId: "agora-demo-e9ec7",
-    storageBucket: "agora-demo-e9ec7.appspot.com",
-    messagingSenderId: "285163833247",
-    appId: "1:285163833247:web:839c333c4ce7063f671faa",
-    measurementId: "G-1LZKVX6NFZ"
-  }
+    apiKey: 'AIzaSyDZluG3ZTVBx1xTH-tEF18EScnfwiOQ98E',
+    authDomain: 'agora-demo-e9ec7.firebaseapp.com',
+    projectId: 'agora-demo-e9ec7',
+    storageBucket: 'agora-demo-e9ec7.appspot.com',
+    messagingSenderId: '285163833247',
+    appId: '1:285163833247:web:839c333c4ce7063f671faa',
+    measurementId: 'G-1LZKVX6NFZ',
+  },
+  agora: {
+    appId: '60c972e80bee423ea01a8ca67121691d',
+  },
 };
 
 /*
