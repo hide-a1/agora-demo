@@ -31,8 +31,8 @@ export class EntranceComponent implements OnInit {
 
   ngOnInit(): void {}
 
-  joinChannel(): void {
+  joinChannel(uid: string): void {
     const channelId = this.channelControl.value;
-    this.router.navigateByUrl(`/${channelId}`);
+    this.router.navigateByUrl(`/${channelId}/${uid}`);
   }
 }

@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Observable } from 'rxjs';
 import { map, switchMap, take, tap } from 'rxjs/operators';
@@ -12,12 +13,14 @@ import { MeetingService } from 'src/app/services/meeting.service';
   styleUrls: ['./channel.component.scss'],
 })
 export class ChannelComponent implements OnInit {
+  uid: string;
   user$: Observable<User> = this.authService.user$;
   channelId$: Observable<string> = this.route.paramMap.pipe(
     map((params) => params.get('channelId'))
   );
   channelId: string;
   players: any;
+  isPro;
 
   participants$: Observable<User[]> = this.channelId$.pipe(
     switchMap((params) => {
@@ -30,47 +33,44 @@ export class ChannelComponent implements OnInit {
     private authService: AuthService,
     private route: ActivatedRoute,
     private meetingService: MeetingService,
-    private router: Router
+    private router: Router,
+    private snackBar: MatSnackBar
   ) {}
 
   ngOnInit(): void {
     this.route.paramMap
       .pipe(
         take(1),
-        map((param) => param.get('channelId')),
-        tap((id) => {
-          this.channelId = id;
+        tap((param) => {
+          this.channelId = param.get('channelId');
+          this.uid = param.get('uid');
         })
       )
       .toPromise()
-      .then((id) => {
-        console.log(this.authService.uid);
-        setTimeout(() => {
-          this.meetingService.joinAgoraChannel(this.authService.uid, id);
-        }, 1000);
+      .then(() => {
+        this.meetingService.joinAgoraChannel(this.uid, this.channelId);
       });
-    console.log(this.channelId);
     this.players = true;
   }
 
-  async joinChannel(uid: string): Promise<void> {
-    const channelName = this.channelId;
-    this.meetingService.joinChannel(uid, channelName);
-    this.players = true;
-  }
-
-  async leaveChannel(uid: string): Promise<void> {
-    this.meetingService.leaveChannel(uid, this.channelId);
+  async leaveChannel(): Promise<void> {
+    this.meetingService.leaveAgoraChannel(this.channelId).then(() => {
+      this.snackBar.open('退室しました');
+    });
     this.router.navigateByUrl('/');
   }
 
   async publishAudio(): Promise<void> {
-    this.meetingService.publishMicrophone();
+    this.meetingService.publishMicrophone().then(() => {
+      this.snackBar.open('音声をオンにしました');
+    });
     this.players = true;
   }
 
   async unPublishAudio(): Promise<void> {
-    this.meetingService.unpublishMicrophone();
+    this.meetingService.unpublishMicrophone().then(() => {
+      this.snackBar.open('音声をミュートしました');
+    });
   }
 
   async publishVideo(): Promise<void> {
@@ -80,5 +80,17 @@ export class ChannelComponent implements OnInit {
 
   async unPublishVideo(): Promise<void> {
     this.meetingService.unpublishVideo();
+  }
+
+  async publishScreen(): Promise<void> {
+    this.meetingService.publishScreen().then(() => {
+      this.snackBar.open('画面共有をオンにしました');
+    });
+  }
+
+  async unPublishScreen(): Promise<void> {
+    this.meetingService.unpublishScreen().then(() => {
+      this.snackBar.open('画面共有をオフにしました');
+    });
   }
 }

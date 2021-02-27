@@ -9,7 +9,7 @@ const routes: Routes = [
     component: EntranceComponent,
   },
   {
-    path: ':channelId',
+    path: ':channelId/:uid',
     component: ChannelComponent,
   },
 ];
